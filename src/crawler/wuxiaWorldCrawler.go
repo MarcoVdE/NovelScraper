@@ -1,6 +1,7 @@
 package crawler
 
 import (
+	"../models"
 	"fmt"
 	"github.com/gocolly/colly"
 	"image"
@@ -11,13 +12,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-type Chapter struct {
-	Title   string `json:"Title"` //section#content>div.my_container>div.content>div.content_left>div.manga_view_name>h1.
-	URL     string `json:"URL"`
-	Chapter int    `json:"Chapter"` //extract from title as always Chapter space number.
-	Content string `json:"Content"` //div#content //Note <br><br> is used for next line. Extracted converts to \n
-}
 
 func getChapterFromTitle(title string) int {
 	//title := "Sovereign of the Karmic System Chapter 187: The Hellblazer Company" //note space between results,
@@ -56,7 +50,7 @@ func getImage(url string) image.Image {
 }
 
 //this is based on the CourseRA crawler.
-func WuxiaWorldCrawler(novelTitle string) ([]Chapter, image.Image) {
+func WuxiaWorldCrawler(novelTitle string) ([]models.Chapter, image.Image) {
 	// Instantiate default collector
 	c := colly.NewCollector(
 		// Visit only domains
@@ -72,7 +66,7 @@ func WuxiaWorldCrawler(novelTitle string) ([]Chapter, image.Image) {
 
 	// Create another collector to scrape course details
 	detailCollector := c.Clone()
-	chapters := make([]Chapter, 0, 200)
+	chapters := make([]models.Chapter, 0, 200)
 
 	//On every a element which has href attribute call callback
 	c.OnHTML("a[href~='"+novelTitle+"/chapter-']", func(e *colly.HTMLElement) {
@@ -103,7 +97,7 @@ func WuxiaWorldCrawler(novelTitle string) ([]Chapter, image.Image) {
 		if title == "" {
 			log.Println("No title found", e.Request.URL)
 		}
-		chapter := Chapter{
+		chapter := models.Chapter{
 			Title:   title,
 			URL:     e.Request.URL.String(),
 			Chapter: getChapterFromTitle(title),

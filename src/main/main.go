@@ -2,25 +2,15 @@ package main
 
 import (
 	"../crawler"
+	model "../models"
 	"../rest_api"
-	"image"
 )
 
-type NovelFetch struct {
-	Title string
-	URL   string
-}
-
-type NovelList struct {
-	Title       string
-	ChapterList []crawler.Chapter
-	NovelImage  image.Image
-}
+var novels []model.NovelList
 
 func init() {
-	var novels []NovelList
 	//novels to get:
-	var titles = []NovelFetch{
+	var titles = []model.NovelFetch{
 		{
 			Title: "Sovereign Of The Karmic System",
 			URL:   "sovereign-of-the-karmic-system",
@@ -29,14 +19,14 @@ func init() {
 
 	for _, each := range titles {
 		chapter, novelImage := crawler.WuxiaWorldCrawler(each.URL)
-		novels = append(novels, NovelList{each.Title, chapter, novelImage})
+		novels = append(novels, model.NovelList{Title: each.Title, ChapterList: chapter, NovelImage: novelImage})
 	}
 
-	//TODO: Create API for fetching the books. Use JSON Encode.
 	//TODO: Create integration with: https://github.com/languagetool-org/languagetool
+	//maybe do this client side to get over 100 request a day limit? User can then send it back, if x amount of user send it's good.
+	//or allow instantly if user certain privileges (e.g. me) after authentication implemented.
 }
 
 func main() {
-	rest_api.RestAPIEntry()
-
+	rest_api.RestAPIEntry(novels)
 }
