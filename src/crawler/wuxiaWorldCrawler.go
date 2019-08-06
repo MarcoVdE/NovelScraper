@@ -111,11 +111,6 @@ func WuxiaWorldCrawler(novelTitle string) ([]models.Chapter, image.Image) {
 	})
 
 	_ = c.Visit("https://wuxiaworld.world/" + novelTitle + "/")
-	//
-	//enc := json.NewEncoder(os.Stdout)
-	//enc.SetIndent("", "  ")
-	//
-	//// Dump json to the standard output
-	//_ = enc.Encode(chapters)
+
 	return chapters, novelImage
 }
