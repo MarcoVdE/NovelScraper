@@ -6,7 +6,8 @@ import (
 	"../rest_api"
 )
 
-var novels []model.NovelList
+//var novels []model.NovelList
+var mobileNovels []model.NovelList
 
 func init() {
 	//novels to get:
@@ -16,10 +17,30 @@ func init() {
 			URL:   "sovereign-of-the-karmic-system",
 		},
 	}
+	//
+	//for _, each := range titles {
+	//	chapter, novelImage := crawler.WuxiaWorldCrawler(each.URL)
+	//	novels = append(novels, model.NovelList{
+	//		Title: each.Title,
+	//		ChapterList: chapter,
+	//		NovelImage: novelImage,
+	//	})
+	//}
+	//
+	//titles = []model.NovelFetch {
+	//	{
+	//		Title: "Sovereign Of The Karmic System",
+	//		URL: "sovereign-of-the-karmic-system",
+	//	},
+	//}
 
 	for _, each := range titles {
-		chapter, novelImage := crawler.WuxiaWorldCrawler(each.URL)
-		novels = append(novels, model.NovelList{Title: each.Title, ChapterList: chapter, NovelImage: novelImage})
+		chapter, novelImage := crawler.WuxiaWorldMobileCrawler(each.URL)
+		mobileNovels = append(mobileNovels, model.NovelList{
+			Title:       each.Title,
+			ChapterList: chapter,
+			NovelImage:  novelImage,
+		})
 	}
 
 	//TODO: Create integration with: https://github.com/languagetool-org/languagetool
@@ -28,5 +49,6 @@ func init() {
 }
 
 func main() {
-	rest_api.RestAPIEntry(novels)
+	//rest_api.RestAPIEntry(novels)
+	rest_api.RestAPIEntry(mobileNovels)
 }

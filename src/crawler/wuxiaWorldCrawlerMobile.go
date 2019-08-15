@@ -1,7 +1,9 @@
 package crawler
 
 import (
+	"../models"
 	"fmt"
+	"github.com/gocolly/colly"
 	"image"
 	"image/jpeg"
 	"log"
@@ -9,9 +11,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-
-	"../models"
-	"github.com/gocolly/colly"
 )
 
 //Get image off of: https://m.wuxiaworld.co/Sovereign-of-the-Karmic-System/
@@ -52,35 +51,63 @@ func getMobileImage(url string) image.Image {
 	return img
 }
 
+func cleanContentByStringSlice(content string, cleanup []string) string {
+	for _, each := range cleanup {
+		content = strings.ReplaceAll(content, each, "\n\n")
+	}
+	return content
+}
+
+func cleanContent(content string) string {
+	//remove first div with addsense
+	//removing the Google Add at the beginning.
+	parts := strings.Split(content, `</div>`)
+	fmt.Printf("%q\n", parts)
+
+	if len(parts) > 1 {
+		content = parts[1]
+	} else {
+		content = parts[0]
+	}
+	//remove amp auto adds
+	strings.ReplaceAll(content, `<amp-auto-ads type="adsense"
+	data-ad-client="ca-pub-2853920792116568">
+	</amp-auto-ads>
+	<script>app2()</script>`, "<br>")
+
+	//remove chapter mid
+	strings.ReplaceAll(content, `<script>ChapterMid();</script>`, "<br>")
+
+	//remove end div.
+	parts = strings.Split(content, "<div>")
+	fmt.Printf("%q\n", parts)
+
+	if len(parts) > 1 {
+		content = parts[0]
+	} else {
+		content = parts[1]
+	}
+
+	return content
+}
+
 //this is based on the CourseRA crawler.
 func WuxiaWorldMobileCrawler(novelTitle string) ([]models.Chapter, image.Image) {
 	// Instantiate default collector
 	c := colly.NewCollector(
 		// Visit only domains
-		colly.AllowedDomains("wuxiaworld.co", "wuxiaworld.co"),
+		colly.AllowedDomains("wuxiaworld.co", "www.wuxiaworld.co", "m.wuxiaworld.co"),
 
 		// Cache responses to prevent multiple download of pages
 		// even if the collector is restarted
 		colly.CacheDir("./wuxiaworld_mobile_cache"),
 	)
-
-	//Novel cover image.
-	var novelImage image.Image
-
 	// Create another collector to scrape course details
 	detailCollector := c.Clone()
 	chapters := make([]models.Chapter, 0, 200)
 
-	//On every a element which has href attribute call callback
-	// c.OnHTML("a[href~=.html']", func(e *colly.HTMLElement) {
-	// 	link := e.Attr("href")
-	// 	// start scraping the page under the link found
-	// 	_ = e.Request.Visit(link)
-	// })
-
-	//TODO: Make sure this goes to /all.html
 	// On every a HTML element which has name attribute call callback
-	c.OnHTML(`div[id=chapterlist] > p > a[href]`, func(e *colly.HTMLElement) {
+	c.OnHTML(`div[id='chapterlist']>p>a[href$='.html']`, func(e *colly.HTMLElement) {
 		// Activate detailCollector if the link contains chapter
 		courseURL := e.Request.AbsoluteURL(e.Attr("href"))
 		fmt.Println("Visiting link: " + courseURL)
@@ -91,25 +118,33 @@ func WuxiaWorldMobileCrawler(novelTitle string) ([]models.Chapter, image.Image) 
 		}
 	})
 
-	// TODO: Add image support. this file:122
-	// c.OnHTML(`div.manga_info_img`, func(e *colly.HTMLElement) {
-	// 	novelImage = getMobileImage(e.ChildAttr("img.img-responsive", "src"))
-	// })
-
 	// Extract details of the course
-	detailCollector.OnHTML(`div[id=chaptercontent]`, func(e *colly.HTMLElement) {
-		log.Println("Chapter found", e.Request.URL)
-		title := e.ChildText("div.content h1")
+	detailCollector.OnHTML(`body[id='read']`, func(e *colly.HTMLElement) {
+		fmt.Printf("Title found at URL: %s", e.Request.URL)
+		title := e.ChildText("header[id='top']>span.title")
 		if title == "" {
-			log.Println("No title found", e.Request.URL)
+			fmt.Println("No title found", e.Request.URL)
 		}
+
 		chapter := models.Chapter{
-			Title:   title, //TODO: Title comes from elsewhere, this function needs to be split into two.
+			Title:   title,
 			URL:     e.Request.URL.String(),
 			Chapter: getMobileChapterFromTitle(title),
-			Content: strings.TrimSuffix(e.ChildText("div#content"), "chaptererror();"), //TODO: Need to remove the beginning div as it's a Google Add.
+			Content: cleanContentByStringSlice(
+				e.ChildText("div[id=chaptercontent]"),
+				[]string{
+					//`<amp-auto-ads type="adsense"
+					//data-ad-client="ca-pub-2853920792116568">
+					//</amp-auto-ads>`,
+					//"<script>app2()</script>",
+					"app2()",
+					//"<script>ChapterMid();</script>",
+					"ChapterMid();",
+					e.ChildText("div[id=chaptercontent] div"),
+				},
+			),
+			//Content: cleanContent(e.ChildText("div[id=chaptercontent]")),
 		}
-
 		//filter out empty content like preview ones.
 		if chapter.Content != "" {
 			chapters = append(chapters, chapter)
@@ -118,8 +153,8 @@ func WuxiaWorldMobileCrawler(novelTitle string) ([]models.Chapter, image.Image) 
 
 	_ = c.Visit("https://m.wuxiaworld.co/" + novelTitle + "/all.html")
 
-	//only get the image form here? TODO: Make own function
-	_ = c.Visit("https://m.wuxiaworld.co/" + novelTitle + "/")
+	//TODO: Scrape base page, can get chapter information from there, and check whether there is a new chapter since update time, reducing load on site.
 
-	return chapters, novelImage
+	//All images follow rule: https://www.wuxiaworld.co/BookFiles/BookImages/sovereign-of-the-karmic-system.jpg Note capitalization doesn't matter.
+	return chapters, getMobileImage("https://www.wuxiaworld.co/BookFiles/BookImages/" + novelTitle + ".jpg")
 }

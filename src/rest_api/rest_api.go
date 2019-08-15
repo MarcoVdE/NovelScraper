@@ -19,6 +19,8 @@ and
 https://blog.usejournal.com/authentication-in-golang-c0677bcce1a8
 */
 
+//TODO: Test if image works, else base64 encode: encoded := base64.StdEncoding.EncodeToString(content)
+
 var novelList []models.NovelList
 
 func RestAPIEntry(nvlList []models.NovelList) {
