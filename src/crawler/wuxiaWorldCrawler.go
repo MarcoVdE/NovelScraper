@@ -49,7 +49,8 @@ func getImage(url string) image.Image {
 	return img
 }
 
-//this is based on the CourseRA crawler.
+// Deprecated: use mobile instead, the cache is substantially smaller (3%).
+// This is based on the CourseRA crawler.
 func WuxiaWorldCrawler(novelTitle string) ([]models.Chapter, image.Image) {
 	// Instantiate default collector
 	c := colly.NewCollector(
